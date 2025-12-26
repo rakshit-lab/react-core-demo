@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef, type ReactNode, type FormEvent } from 'react';
+import React, { useState, useEffect, useRef, type ReactNode, type FormEvent, type ChangeEvent } from 'react';
 
-// --- TYPES & INTERFACES ---
+// --- 1. TYPES & INTERFACES (TypeScript Core) ---
 interface Task {
   id: number;
   text: string;
@@ -16,7 +16,7 @@ interface TaskRowProps {
   onRemove: (id: number) => void;
 }
 
-// 1. REUSABLE COMPONENT (Full Width)
+// --- 2. COMPONENT REUSABILITY & COMPOSITION ---
 const SectionWrapper: React.FC<SectionProps> = ({ title, children }) => (
   <div style={{ 
     border: '1px solid #ddd', 
@@ -25,37 +25,41 @@ const SectionWrapper: React.FC<SectionProps> = ({ title, children }) => (
     marginBottom: '20px', 
     background: '#fff',
     boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
-    width: '100%' // Ensures the card takes full width of container
   }}>
-    <h2 style={{ marginTop: 0, color: '#333', fontSize: '1.5rem' }}>{title}</h2>
+    <h2 style={{ marginTop: 0, color: '#333', fontSize: '1.4rem' }}>{title}</h2>
     {children}
   </div>
 );
 
+// --- 3. FUNCTIONAL COMPONENT (Using Props) ---
 const TaskRow: React.FC<TaskRowProps> = ({ task, onRemove }) => (
   <div style={{ 
     display: 'flex', 
     justifyContent: 'space-between', 
-    padding: '12px 0', 
+    padding: '12px 10px', 
     borderBottom: '1px solid #eee',
-    fontSize: '1.1rem'
+    alignItems: 'center'
   }}>
-    <span>{task.text}</span>
-    <button onClick={() => onRemove(task.id)} style={{ 
-      color: '#ff4d4f', 
-      border: 'none', 
-      background: 'none', 
-      cursor: 'pointer',
-      fontWeight: 'bold' 
-    }}>Delete</button>
+    <span style={{ fontSize: '1.1rem' }}>{task.text}</span>
+    <button 
+      onClick={() => onRemove(task.id)} 
+      style={{ color: '#ff4d4f', border: '1px solid #ff4d4f', background: 'none', padding: '5px 10px', borderRadius: '4px', cursor: 'pointer' }}
+    >
+      Delete
+    </button>
   </div>
 );
 
 const App: React.FC = () => {
+  // --- 4. STATE MANAGEMENT (useState) ---
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [text, setText] = useState<string>("");
-  const searchInput = useRef<HTMLInputElement>(null);
+  const [inputText, setInputText] = useState<string>(""); // Controlled Input
+  const [searchQuery, setSearchQuery] = useState<string>(""); // For filtering
 
+  // --- 5. UNCONTROLLED COMPONENT (useRef) ---
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // --- 6. SIDE EFFECTS (useEffect) ---
   useEffect(() => {
     const saved = localStorage.getItem("tasks_list_ts");
     if (saved) setTasks(JSON.parse(saved));
@@ -65,72 +69,95 @@ const App: React.FC = () => {
     localStorage.setItem("tasks_list_ts", JSON.stringify(tasks));
   }, [tasks]);
 
-  const handleAdd = (e: FormEvent) => {
+  // --- HANDLERS ---
+  const handleAddTask = (e: FormEvent) => {
     e.preventDefault();
-    if (!text.trim()) return;
-    setTasks([...tasks, { id: Date.now(), text }]);
-    setText("");
+    if (!inputText.trim()) return;
+    setTasks([...tasks, { id: Date.now(), text: inputText }]);
+    setInputText("");
   };
 
-  const alertSearch = (): void => {
-    alert("Searching for: " + searchInput.current?.value);
+  const handleSearchClick = () => {
+    // Reading value from Uncontrolled component
+    const value = searchInputRef.current?.value || "";
+    setSearchQuery(value.toLowerCase());
   };
+
+  // Logic for filtering tasks based on search
+  const filteredTasks = tasks.filter(t => t.text.toLowerCase().includes(searchQuery));
 
   return (
-    // MAIN CONTAINER: Uses 100% width and centered content
     <div style={{ 
-      backgroundColor: '#f0f2f5', 
+      backgroundColor: '#f8f9fa', 
       minHeight: '100vh', 
-      width: '100%', 
-      padding: '40px 20px',
-      boxSizing: 'border-box',
+      width: '100vw', 
       display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center'
+      flexDirection: 'column'
     }}>
-      {/* WRAPPER: Increased maxWidth to 90% or 1000px for a "Fuller" look */}
-      <div style={{ width: '100%', maxWidth: '1000px' }}>
-        <h1 style={{ textAlign: 'left', fontSize: '2.5rem', marginBottom: '30px', color: '#1a1a1a' }}>Task Master</h1>
+      {/* FULL WIDTH HEADER */}
+      <header style={{ padding: '20px 50px', background: '#2c3e50', color: 'white' }}>
+        <h1 style={{ margin: 0 }}>Task Master</h1>
+      </header>
 
-        {/* GRID LAYOUT: Using CSS Grid to fill the space */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-          gap: '20px' 
-        }}>
-          
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <SectionWrapper title="Add Task">
-              <form onSubmit={handleAdd} style={{ display: 'flex', gap: '10px' }}>
-                <input 
-                  style={{ flex: 1, padding: '12px', borderRadius: '6px', border: '1px solid #ccc' }}
-                  value={text} 
-                  onChange={(e) => setText(e.target.value)} 
-                  placeholder="Enter task name..."
-                />
-                <button type="submit" style={{ padding: '0 20px', borderRadius: '6px', cursor: 'pointer', background: '#1890ff', color: 'white', border: 'none' }}>
-                  Add Task
-                </button>
-              </form>
-            </SectionWrapper>
-
-            <SectionWrapper title="Quick Search">
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <input ref={searchInput} style={{ flex: 1, padding: '12px', borderRadius: '6px', border: '1px solid #ccc' }} placeholder="Search..." />
-                <button onClick={alertSearch} style={{ padding: '0 20px', borderRadius: '6px', cursor: 'pointer' }}>Search</button>
-              </div>
-            </SectionWrapper>
-          </div>
-          <SectionWrapper title="Your Tasks">
-            {tasks.length === 0 ? <p>No tasks yet.</p> : 
-              tasks.map(item => (
-                <TaskRow key={item.id} task={item} onRemove={(id) => setTasks(tasks.filter(t => t.id !== id))} />
-              ))
-            }
+      {/* FULL SCREEN MAIN LAYOUT */}
+      <main style={{ 
+        display: 'grid', 
+        gridTemplateColumns: '350px 1fr', // 350px Sidebar, rest is main content
+        gap: '40px',
+        padding: '40px 50px',
+        flex: 1
+      }}>
+        
+        {/* SIDEBAR (Controls) */}
+        <aside>
+          <SectionWrapper title="Add New Task">
+            <form onSubmit={handleAddTask} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <input 
+                style={{ padding: '12px', borderRadius: '6px', border: '1px solid #ccc' }}
+                value={inputText} 
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setInputText(e.target.value)} 
+                placeholder="What needs to be done?"
+              />
+              <button type="submit" style={{ padding: '12px', borderRadius: '6px', cursor: 'pointer', background: '#1890ff', color: 'white', border: 'none', fontWeight: 'bold' }}>
+                Create Task
+              </button>
+            </form>
           </SectionWrapper>
 
-        </div>
-      </div>
+          <SectionWrapper title="Filter Search">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              {/* UNCONTROLLED INPUT */}
+              <input 
+                ref={searchInputRef} 
+                style={{ padding: '12px', borderRadius: '6px', border: '1px solid #ccc' }} 
+                placeholder="Type and click search..." 
+              />
+              <button onClick={handleSearchClick} style={{ padding: '10px', borderRadius: '6px', cursor: 'pointer' }}>
+                Search Tasks
+              </button>
+              {searchQuery && <button onClick={() => setSearchQuery("")} style={{ color: 'blue', border: 'none', background: 'none', cursor: 'pointer' }}>Clear Filter</button>}
+            </div>
+          </SectionWrapper>
+        </aside>
+
+        {/* MAIN CONTENT (Results) */}
+        <section>
+          <SectionWrapper title={searchQuery ? `Results for "${searchQuery}"` : "All Tasks"}>
+            {filteredTasks.length === 0 ? (
+              <p style={{ color: '#888', textAlign: 'center', padding: '20px' }}>No tasks found.</p>
+            ) : (
+              filteredTasks.map(item => (
+                <TaskRow 
+                  key={item.id} 
+                  task={item} 
+                  onRemove={(id) => setTasks(tasks.filter(t => t.id !== id))} 
+                />
+              ))
+            )}
+          </SectionWrapper>
+        </section>
+
+      </main>
     </div>
   );
 }
